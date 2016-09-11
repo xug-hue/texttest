@@ -9,7 +9,7 @@ import com.hp.hpl.jena.db.DBConnection;
 import com.hp.hpl.jena.db.IDBConnection;
 import com.hp.hpl.jena.ontology.*;
 
-public class OntAnalysisMysql  {
+public class OntAnalysis  {
 	
 //    public static final String strDriver = "com.mysql.jdbc.Driver"; //path of driver class  
 //    public static final String strURL = "jdbc:mysql://localhost/ontodb"; // URL of database  
@@ -23,22 +23,7 @@ public class OntAnalysisMysql  {
 	 * 
 	 * */
 	public OntModel createOnt(String owlpath) {
-/**        
-		
-	   // 创建一个数据库连接  
-        IDBConnection conn = new DBConnection ( strURL, strUser, strPassWord, strDB ); 
-       // 加载数据库驱动类，需要处理异常  
-        try{  
-      		Class.forName(strDriver);
-        }catch(ClassNotFoundException e) {  
-             e.printStackTrace();  
-        }  
-		//使用数据库连接参数创建一个模型制造器
-        ModelMaker maker = ModelFactory.createModelRDBMaker(conn);
-		//创建一个默认模型
-        Model base = maker.createDefaultModel();
-        OntModel ontmodel = ModelFactory.createOntologyModel(getModelSpec(maker), base);
-**/
+
         OntModel ontmodel = ModelFactory.createOntologyModel(OntModelSpec.OWL_MEM);      
         try {
 			ontmodel.read(new FileInputStream(owlpath), ""); // 读取文件，加载模型
@@ -48,15 +33,6 @@ public class OntAnalysisMysql  {
 		return  ontmodel;
 	}
 
-/**	
-	public static OntModelSpec getModelSpec(ModelMaker maker) {
-	    
-		 OntModelSpec spec = new OntModelSpec(OntModelSpec.OWL_MEM);
-	     spec.setImportModelMaker(maker);
-	     
-	     return spec;
-	}
-**/
 		/*函数功能说明
 		 * 
 		 * 获取owl文件中所有的class,内容包括：
@@ -71,30 +47,97 @@ public class OntAnalysisMysql  {
 			for (Iterator allclass = ontModel.listClasses(); allclass.hasNext();) {
 				
 				OntClass ontclass = (OntClass) allclass.next();
-				if(!ontclass.isAnon()){
+				if(!ontclass.isAnon())
+				{
 				String classstr = ontclass.toString();
 //				OntClassDTO dto = new OntClassDTO();;
 //				System.out.println(dto.getC_URI());
 				System.out.print("类URI：" + classstr + "   ");
-				str = classstr.substring(classstr.indexOf("#") + 1);
+				str = classstr.substring(classstr.indexOf("obo/"));
 				System.out.print("类名：" + str + "   ");
+				
+				
+				/**
+				 * 父类
+				
 				if (!ontclass.listSuperClasses().hasNext()) {
 								
 					System.out.println("类描述类型：无");
 				} else {
-					for (Iterator supclasses = ontclass.listSuperClasses(); supclasses
-							.hasNext();) {
+					for (Iterator supclasses = ontclass.listSuperClasses(); supclasses.hasNext();) {
 						OntClass supclass = (OntClass) supclasses.next();
-						String supclasstr = supclass.toString();
-						str = supclasstr.substring(supclasstr.indexOf("#") + 1);
+						String supclasstr = null;
+						if(supclass.isRestriction())
+							{
+								supclasstr= supclass.asRestriction().getOnProperty().toString();
+								supclasstr="OnProperty:"+supclasstr.substring(supclasstr.indexOf("obo/"));
+								if(supclass.asRestriction().isSomeValuesFromRestriction())
+								{
+									String somevaluefrom= supclass.asRestriction().asSomeValuesFromRestriction().getSomeValuesFrom().toString();
+									somevaluefrom= somevaluefrom.substring(somevaluefrom.indexOf("obo/"));
+									supclasstr= supclasstr+ "; SomeValuesFrom:" + somevaluefrom;
+								}
+								str= supclasstr;
+							}
+						else 
+							{
+								supclasstr = supclass.toString();
+								str = supclasstr.substring(supclasstr.indexOf("obo/"));
+							}
+					
 						System.out.print("类描述类型：subClassOf   ");
 						System.out.println("类描述值：" + str);
 						
-						
 					}
 				}
+				 */
+				
+				for (Iterator it = ontclass.listSuperClasses(); it.hasNext();)
+
+				{
+
+				          OntClass sp = (OntClass) it.next();
+
+				          String strx = ontclass.getModel().getGraph().getPrefixMapping().shortForm(ontclass.getURI())+ "'s superClass is " ; // 获取URI
+
+				          String strSP = sp.getURI();
+
+				          try{ // 另一种简化处理URI的方法
+
+				                 strx = strx + ":" + strSP.substring(strSP.indexOf("obo/"));
+
+				                 System.out.println("     Class" +strx);
+
+				          }catch( Exception e ){}
+
+				} // super class ends
+
+				for(Iterator ipp = ontclass.listDeclaredProperties(); ipp.hasNext();){
+
+			          OntProperty p = (OntProperty)ipp.next();
+			          if(ontclass.hasProperty(p))
+			        	  System.out.println("     associated property: " + p.getLocalName()+  "  "+ ontclass.getPropertyValue(p).toString());
+
+			          }// property ends
+
+				
+				for(Iterator ipp = ontclass.listRDFTypes(true); ipp.hasNext();){
+
+			          Resource p = (Resource)ipp.next();
+			        	  System.out.println(p.toString());
+
+			          }
+//				 System.out.println(ontclass.listp.getLabel("label").toString());
+//				if (ontclass.asDatatypeProperty().) 
+//				{
+//					for (Iterator types = ontclass.listRDFTypes(true); types.hasNext();) {
+//						OntResource ontres= (OntResource) types.next();
+//						System.out.println(ontres.getLabel(null));
+//					}
+//				}
 				}
 			}
+
 		}
 
 		/* 函数功能说明
@@ -108,7 +151,12 @@ public class OntAnalysisMysql  {
 			String str;
 //			OntProtyDAO dao = new OntProtyDAO();
 			
-			// 列出所有的对象属性
+			/** 列出所有的对象属性			**/
+			if (!ontMdel.listObjectProperties().hasNext()) {
+				
+				System.out.println("属性：无");
+			} else {
+				
 			for (Iterator allobjpry = ontMdel.listObjectProperties(); allobjpry
 					.hasNext();) {
 
@@ -130,7 +178,14 @@ public class OntAnalysisMysql  {
 				System.out.println("  值域：" + rangestr);
 
 			}
+			}
+			
+
 			// 列出所有的数据属性
+			if (!ontMdel.listDatatypeProperties().hasNext()) {
+				
+				System.out.println("data属性：无");
+			} else {
 			for (Iterator alldatapry = ontMdel.listDatatypeProperties(); alldatapry
 					.hasNext();) {
 
@@ -153,6 +208,7 @@ public class OntAnalysisMysql  {
 				System.out.println(str);
 				System.out.println(domainstr);
 				System.out.println(rangestr);
+			}
 			}
 		}
 
@@ -241,17 +297,17 @@ public class OntAnalysisMysql  {
 		}
 
 		public static void main(String[] args) {
-			String owlpath = "C:\\Users\\Administrator\\Desktop\\ms.owl";
+			String owlpath = "C:\\Users\\Administrator\\Desktop\\mstest.owl";
 			System.out.println("--------------------------------------------列表1    类------------------------------");
-			new OntAnalysisMysql().getAllClasses(owlpath);
+			new OntAnalysis().getAllClasses(owlpath);
 //			System.out.println("--------------------------------------------列表2    属性-----------------------------");
-//			new OntAnalysisMysql().getAllProperties(owlpath);
+//			new OntAnalysis().getAllProperties(owlpath);
 //			System.out.println("--------------------------------------------列表3   属性特征--------------------------");
-//			new OntAnalysisMysql().getAllProcharac(owlpath);
+//			new OntAnalysis().getAllProcharac(owlpath);
 //			System.out.println("--------------------------------------------列表4    属性约束--------------------------");
-//			new OntAnalysisMysql().getAllProcharac(owlpath);
+//			new OntAnalysis().getAllProcharac(owlpath);
 //			System.out.println("--------------------------------------------列表5    实例------------------------------");
-//			new OntAnalysisMysql().getAllIndividuals(owlpath);
+//			new OntAnalysis().getAllIndividuals(owlpath);
 			
 		}
 

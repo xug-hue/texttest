@@ -7,12 +7,12 @@ public class GoTest {
 	public GoTest()
 	{
 		try {
-			FileReader fr = new FileReader("C:\\Users\\Administrator\\Desktop\\go.owl");  
+			FileReader fr = new FileReader("C:\\Users\\Administrator\\Desktop\\uniprot-soybean.txt");  
 	 		BufferedReader br = new BufferedReader(fr); 
 //        	PrintWriter out = new PrintWriter(new FileWriter("C:\\Users\\Administrator\\Desktop\\excel.xls"));
 	 		String str="";
 	 		int lineNum=0;
-			while((str=br.readLine())!=null && lineNum<500){
+			while((str=br.readLine())!=null && lineNum<1500){
 				lineNum++;
 				System.out.println(str);
 	 			
